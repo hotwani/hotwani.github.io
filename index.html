@@ -67,73 +67,80 @@
     // Create and shuffle puzzle pieces
     const positions = [];
     for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        positions.push({ x: col * pieceWidth, y: row * pieceHeight });
-      }
+        for (let col = 0; col < cols; col++) {
+            positions.push({ x: col * pieceWidth, y: row * pieceHeight });
+        }
     }
     const shuffledPositions = [...positions].sort(() => Math.random() - 0.5);
 
     shuffledPositions.forEach((pos, index) => {
-      const piece = document.createElement("div");
-      piece.classList.add("puzzle-piece");
-      piece.style.backgroundImage = `url(${image})`;
-      piece.style.backgroundPosition = `-${positions[index].x}px -${positions[index].y}px`;
-      piece.style.left = `${pos.x}px`;
-      piece.style.top = `${pos.y}px`;
+        const piece = document.createElement("div");
+        piece.classList.add("puzzle-piece");
+        piece.style.backgroundImage = `url(${image})`;
+        piece.style.backgroundPosition = `-${positions[index].x}px -${positions[index].y}px`;
+        piece.style.left = `${pos.x}px`;
+        piece.style.top = `${pos.y}px`;
 
-      piece.draggable = true;
-      piece.dataset.correctX = positions[index].x;
-      piece.dataset.correctY = positions[index].y;
+        piece.draggable = true;
+        piece.dataset.correctX = positions[index].x;
+        piece.dataset.correctY = positions[index].y;
 
-      // Drag & Drop functionality
-      piece.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/plain", JSON.stringify({ x: pos.x, y: pos.y }));
-      });
+        container.appendChild(piece);
 
-      container.appendChild(piece);
+        // Add touch support
+        piece.addEventListener("touchstart", handleTouchStart);
+        piece.addEventListener("touchmove", handleTouchMove);
+        piece.addEventListener("touchend", handleTouchEnd);
     });
 
-    container.addEventListener("dragover", (e) => {
-      e.preventDefault();
-    });
+    let draggedPiece = null;
+    let offsetX = 0;
+    let offsetY = 0;
 
-    container.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-      const piece = Array.from(container.children).find(
-        (child) => parseInt(child.style.left) === data.x && parseInt(child.style.top) === data.y
-      );
-      const dropX = Math.floor(e.offsetX / pieceWidth) * pieceWidth;
-      const dropY = Math.floor(e.offsetY / pieceHeight) * pieceHeight;
+    function handleTouchStart(e) {
+        e.preventDefault();
+        draggedPiece = e.target;
+        const touch = e.touches[0];
+        const rect = draggedPiece.getBoundingClientRect();
+        offsetX = touch.clientX - rect.left;
+        offsetY = touch.clientY - rect.top;
+    }
 
-      // Swap pieces
-      if (piece) {
-        const targetPiece = Array.from(container.children).find(
-          (child) => parseInt(child.style.left) === dropX && parseInt(child.style.top) === dropY
-        );
+    function handleTouchMove(e) {
+        if (!draggedPiece) return;
+        const touch = e.touches[0];
+        draggedPiece.style.position = "absolute";
+        draggedPiece.style.left = `${touch.clientX - offsetX}px`;
+        draggedPiece.style.top = `${touch.clientY - offsetY}px`;
+    }
 
-        if (targetPiece) {
-          [piece.style.left, targetPiece.style.left] = [targetPiece.style.left, piece.style.left];
-          [piece.style.top, targetPiece.style.top] = [targetPiece.style.top, piece.style.top];
-        }
-      }
+    function handleTouchEnd() {
+        if (!draggedPiece) return;
 
-      checkCompletion();
-    });
+        const dropX = Math.round(parseInt(draggedPiece.style.left) / pieceWidth) * pieceWidth;
+        const dropY = Math.round(parseInt(draggedPiece.style.top) / pieceHeight) * pieceHeight;
+
+        // Snap piece to the closest grid position
+        draggedPiece.style.left = `${dropX}px`;
+        draggedPiece.style.top = `${dropY}px`;
+
+        draggedPiece = null;
+        checkCompletion();
+    }
 
     // Check if puzzle is completed
     function checkCompletion() {
-      const isComplete = Array.from(container.children).every((piece) => {
-        return (
-          parseInt(piece.style.left) === parseInt(piece.dataset.correctX) &&
-          parseInt(piece.style.top) === parseInt(piece.dataset.correctY)
-        );
-      });
+        const isComplete = Array.from(container.children).every((piece) => {
+            return (
+                parseInt(piece.style.left) === parseInt(piece.dataset.correctX) &&
+                parseInt(piece.style.top) === parseInt(piece.dataset.correctY)
+            );
+        });
 
-      if (isComplete) {
-        successMessage.style.display = "block";
-      }
+        if (isComplete) {
+            successMessage.style.display = "block";
+        }
     }
-  </script>
+</script>
 </body>
 </html>
